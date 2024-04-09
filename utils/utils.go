@@ -4,15 +4,16 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/labring/lvscare/internal/glog"
-	"github.com/labring/lvscare/internal/ipvs"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/labring/lvscare/internal/glog"
+	"github.com/labring/lvscare/internal/ipvs"
 )
 
-//SplitServer is
+// SplitServer is
 func SplitServer(server string) (string, uint16) {
 	glog.V(8).Infof("server %s", server)
 
@@ -30,7 +31,7 @@ func SplitServer(server string) (string, uint16) {
 	return ip, uint16(p)
 }
 
-//IsHTTPAPIHealth is check http error
+// IsHTTPAPIHealth is check http error
 func IsHTTPAPIHealth(ip, port, path, schem string) bool {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	url := fmt.Sprintf("%s://%s%s", schem, net.JoinHostPort(ip, port), path)

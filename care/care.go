@@ -2,19 +2,20 @@ package care
 
 import (
 	"errors"
-	"github.com/labring/lvscare/internal/glog"
-	"github.com/labring/lvscare/internal/route"
-	"github.com/labring/lvscare/utils"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/labring/lvscare/internal/glog"
+	"github.com/labring/lvscare/internal/route"
+	"github.com/labring/lvscare/utils"
+
 	"github.com/labring/lvscare/service"
 )
 
-//VsAndRsCare is
+// VsAndRsCare is
 func (care *LvsCare) VsAndRsCare() {
 	lvs := service.BuildLvscare()
 	//set inner lvs
@@ -31,8 +32,8 @@ func (care *LvsCare) VsAndRsCare() {
 		return
 	}
 	t := time.NewTicker(time.Duration(care.Interval) * time.Second)
-	sig := make(chan os.Signal)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
 		case <-t.C:
@@ -51,7 +52,10 @@ func (care *LvsCare) VsAndRsCare() {
 			lvs.CheckRealServers(care.HealthPath, care.HealthSchem)
 		case signa := <-sig:
 			glog.Infof("receive kill signal: %+v", signa)
-			_ = LVS.Route.DelRoute()
+			if care.TargetIP != nil {
+				glog.Info("care targetIP not nil, delete router")
+				_ = LVS.Route.DelRoute()
+			}
 			return
 		}
 	}

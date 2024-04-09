@@ -112,6 +112,7 @@ func (l *lvscare) CreateRealServer(rs string, config bool) error {
 	}
 
 }
+
 func (l *lvscare) IsVirtualServerAvailable(vs string) bool {
 	virArray, err := l.handle.GetVirtualServers()
 	if err != nil {
@@ -137,33 +138,37 @@ func (l *lvscare) healthCheck(ip, port, path, shem string) bool {
 }
 
 func (l *lvscare) CheckRealServers(path, schem string) {
-	//if realserver unavilable remove it, if recover add it back
+	//if realserver unavilable remove it once, if recover add it back
+	// change check logical
+
 	for _, realServer := range l.rs {
 		ip := realServer.IP
 		port := strconv.Itoa(int(realServer.Port))
-		if !l.healthCheck(ip, port, path, schem) {
+		_, weight := l.GetRealServer(realServer.String())
+		hc := l.healthCheck(ip, port, path, schem)
+
+		switch {
+		case !hc && weight > 0:
 			err := l.DeleteRealServer(realServer.String(), false)
+			glog.Infof("CheckRealServer not healthy, delete it, %s:%s", ip, port)
 			if err != nil {
-				glog.Warningf("CheckRealServers error: %s;  %d; %v ", realServer.IP, realServer.Port, err)
+				glog.Warningf("CheckRealServers delete %s:%s error: %v ", ip, port, err)
 			}
-		} else {
-			rs, weight := l.GetRealServer(realServer.String())
-			if weight == 0 {
-				err := l.DeleteRealServer(realServer.String(), false)
-				glog.V(8).Info("CheckRealServers debug: remove weight = 0 real server")
-				if err != nil {
-					glog.Warningf("CheckRealServers error[remove weight = 0 real server failed]: %s;  %d; %v ", realServer.IP, realServer.Port, err)
-				}
+		case !hc && weight < 0:
+			glog.Warningf("CheckRealServer not healthy, but wait for it recoverred, %s:%s", ip, port)
+		case hc && weight <= 0:
+			// delete and create new one
+			err := l.DeleteRealServer(realServer.String(), false)
+			glog.V(8).Info("CheckRealServers debug: remove weight = 0 real server")
+			if err != nil {
+				glog.Warningf("CheckRealServers error[remove weight = 0 real server failed]: %s;  %d; %v ", realServer.IP, realServer.Port, err)
 			}
-			if rs == nil || weight == 0 {
-				//add it back
-				ip := realServer.IP
-				port := strconv.Itoa(int(realServer.Port))
-				err := l.CreateRealServer(net.JoinHostPort(ip, port), false)
-				if err != nil {
-					glog.Warningf("CheckRealServers error[add real server failed]: %s;  %d; %v ", realServer.IP, realServer.Port, err)
-				}
+			err = l.CreateRealServer(net.JoinHostPort(ip, port), false)
+			if err != nil {
+				glog.Warningf("CheckRealServers error[add real server failed]: %s;  %d; %v ", realServer.IP, realServer.Port, err)
 			}
+		default:
+			glog.V(8).Infof("CheckRealServer this loop ok, do nothing, %s:%s", ip, port)
 		}
 	}
 }
@@ -174,7 +179,7 @@ func (l *lvscare) GetRealServer(rsHost string) (rs *EndPoint, weight int) {
 	dstArray, err := l.handle.GetRealServers(vs)
 	if err != nil {
 		glog.Errorf("GetRealServer error[get real server failed]: %s;  %d; %v ", ip, port, err)
-		return nil, 0
+		return nil, -1
 	}
 	dip := net.ParseIP(ip)
 	for _, dst := range dstArray {
@@ -183,7 +188,7 @@ func (l *lvscare) GetRealServer(rsHost string) (rs *EndPoint, weight int) {
 			return &EndPoint{IP: ip, Port: port}, dst.Weight
 		}
 	}
-	return nil, 0
+	return nil, -1
 }
 
 func (l *lvscare) DeleteRealServer(rs string, config bool) error {

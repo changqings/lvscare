@@ -47,8 +47,10 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// careCmd.PersistentFlags().String("foo", "", "A help for foo")
-	careCmd.Flags().IPVar(&care.LVS.TargetIP, "ip", nil, "target ip")
-	careCmd.Flags().BoolVar(&care.LVS.RunOnce, "run-once", false, "is run once mode")
+
+	// if targetIP used, will add router, like `ip router add $router`
+	careCmd.Flags().IPVar(&care.LVS.TargetIP, "ip", nil, "target ip, forward all port to this ip")
+	careCmd.Flags().BoolVar(&care.LVS.RunOnce, "run-once", false, "run-once or daemon")
 	careCmd.Flags().StringVar(&care.LVS.VirtualServer, "vs", "", "virtual server like 10.54.0.2:6443")
 	careCmd.Flags().StringSliceVar(&care.LVS.RealServer, "rs", []string{}, "real server like 192.168.0.2:6443")
 	careCmd.Flags().StringVar(&care.LVS.Logger, "logger", "INFO", "logger level: DEBG/INFO")
