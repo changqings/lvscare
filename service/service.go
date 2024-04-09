@@ -3,16 +3,17 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/labring/lvscare/internal/glog"
 	"net"
 	"strconv"
 	"syscall"
+
+	"github.com/labring/lvscare/internal/glog"
 
 	"github.com/labring/lvscare/internal/ipvs"
 	"github.com/labring/lvscare/utils"
 )
 
-//EndPoint  is
+// EndPoint  is
 type EndPoint struct {
 	IP   string
 	Port uint16
@@ -22,7 +23,7 @@ func (ep EndPoint) String() string {
 	return net.JoinHostPort(ep.IP, strconv.Itoa(int(ep.Port)))
 }
 
-//Lvser is
+// Lvser is
 type Lvser interface {
 	CreateVirtualServer(vs string, config bool) error
 	IsVirtualServerAvailable(vs string) bool
@@ -72,7 +73,7 @@ func (l *lvscare) DeleteVirtualServer(vs string, config bool) error {
 	virServer := utils.BuildVirtualServer(vs)
 	err := l.handle.DeleteVirtualServer(virServer)
 	if err != nil {
-		glog.V(8).Infof("VirtualServer is not exist, skip...", err)
+		glog.V(8).Infof("VirtualServer is not exist, skip..., err:%v", err)
 		return nil
 	}
 	if config {
@@ -97,7 +98,7 @@ func (l *lvscare) CreateRealServer(rs string, config bool) error {
 		vServer := utils.BuildVirtualServer(l.vs.String())
 		err := l.handle.AddRealServer(vServer, realServer)
 		if errors.Is(err, syscall.EEXIST) {
-			glog.V(8).Infof("CreateRealServer exist: ", err)
+			glog.V(8).Infoln("CreateRealServer exist: ", err)
 			return nil
 		}
 		if err != nil {
@@ -107,7 +108,7 @@ func (l *lvscare) CreateRealServer(rs string, config bool) error {
 		return nil
 	} else {
 		glog.Error("CreateRealServer error: virtual server is empty.")
-		return fmt.Errorf("virtual server is empty.")
+		return fmt.Errorf("virtual server is empty")
 	}
 
 }
@@ -185,7 +186,6 @@ func (l *lvscare) GetRealServer(rsHost string) (rs *EndPoint, weight int) {
 	return nil, 0
 }
 
-//
 func (l *lvscare) DeleteRealServer(rs string, config bool) error {
 	realIp, realPort := utils.SplitServer(rs)
 	if realIp == "" || realPort == 0 {
@@ -195,7 +195,7 @@ func (l *lvscare) DeleteRealServer(rs string, config bool) error {
 
 	if l.vs == nil {
 		glog.Error("DeleteRealServer error: virtual service is empty.")
-		return fmt.Errorf("virtual service is empty.")
+		return fmt.Errorf("virtual service is empty")
 	}
 	virServer := utils.BuildVirtualServer(l.vs.String())
 	realServer := utils.BuildRealServer(rs)
